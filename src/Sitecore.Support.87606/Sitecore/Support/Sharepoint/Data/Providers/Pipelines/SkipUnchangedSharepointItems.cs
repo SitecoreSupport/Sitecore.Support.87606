@@ -13,6 +13,7 @@ using System.Linq;
 using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
+using Sitecore.StringExtensions;
 
 namespace Sitecore.Support.Sharepoint.Data.Providers.Pipelines
 {
@@ -52,30 +53,48 @@ namespace Sitecore.Support.Sharepoint.Data.Providers.Pipelines
             }
         }
 
-      public override void Process(PublishItemContext context)
-      {
-        Assert.ArgumentNotNull(context, "context");
-        if (context.Action == Sitecore.Publishing.PublishAction.PublishVersion)
+        public override void Process(PublishItemContext context)
         {
-          if (context.VersionToPublish != null)
-          {
-            var isIntegration =
-              context.VersionToPublish.Fields.FirstOrDefault<Field>(
-                field => (field.ID == Sitecore.Sharepoint.Common.FieldIDs.IsIntegrationItem));
-            if (isIntegration != null && isIntegration.Value == "1")
+            Assert.ArgumentNotNull(context, "context");
+            if (context.Action == Sitecore.Publishing.PublishAction.PublishVersion)
             {
-              if (this.ShouldBeSkipped(context))
-              {
-                context.Action = PublishAction.None;
-                context.Result = new PublishItemResult(PublishOperation.Skipped, PublishChildAction.Allow,
-                  "The source and target items have the same revision number.");
-              }
+                if (context.VersionToPublish != null)
+                {
+                    var isIntegration =
+                        context.VersionToPublish.Fields.FirstOrDefault<Field>(
+                            field => (field.ID == Sitecore.Sharepoint.Common.FieldIDs.IsIntegrationItem));
+                    if (isIntegration != null && isIntegration.Value == "1")
+                    {
+                        if (this.ShouldBeSkipped(context))
+                        {
+                            context.Action = PublishAction.None;
+                            context.Result = new PublishItemResult(PublishOperation.Skipped, PublishChildAction.Allow,
+                                "The source and target items have the same revision number.");
+                        }
+                    }
+                }
             }
-          }
+            if (context.Action == Sitecore.Publishing.PublishAction.PublishSharedFields)
+            {
+                var helper = context.PublishHelper;
+                var sourceItem = helper.GetItemToPublish(context.ItemId);
+                if (sourceItem != null)
+                {
+                    var targetItem = helper.GetTargetItemInLanguage(sourceItem.ID, sourceItem.Language);
+                    if (targetItem != null)
+                    {
+                        if (this.CompareNotVersionedFields(sourceItem, targetItem))
+                        {
+                            context.Action = PublishAction.None;
+                            context.Result = new PublishItemResult(PublishOperation.Skipped, PublishChildAction.Allow,
+                                "No versions to publish in '{0}' language.".FormatWith(sourceItem.Language));
+                        }
+                    }
+                }
+            }
         }
-      }
 
-      private bool ShouldBeSkipped(PublishItemContext context)
+        private bool ShouldBeSkipped(PublishItemContext context)
         {
             var helper = context.PublishHelper;
             var sourceItem = context.VersionToPublish;
