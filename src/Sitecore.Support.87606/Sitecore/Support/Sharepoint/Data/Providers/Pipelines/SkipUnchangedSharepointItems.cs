@@ -67,8 +67,7 @@ namespace Sitecore.Support.Sharepoint.Data.Providers.Pipelines
                     {
                         if (this.ShouldBeSkipped(context))
                         {
-                            context.Action = PublishAction.None;
-                            context.Result = new PublishItemResult(PublishOperation.Skipped, PublishChildAction.Allow,
+                            context.AbortPipeline(PublishOperation.Skipped, PublishChildAction.Allow,
                                 "The source and target items have the same revision number.");
                         }
                     }
@@ -85,8 +84,7 @@ namespace Sitecore.Support.Sharepoint.Data.Providers.Pipelines
                     {
                         if (this.CompareNotVersionedFields(sourceItem, targetItem))
                         {
-                            context.Action = PublishAction.None;
-                            context.Result = new PublishItemResult(PublishOperation.Skipped, PublishChildAction.Allow,
+                            context.AbortPipeline(PublishOperation.Skipped, PublishChildAction.Allow,
                                 "No versions to publish in '{0}' language.".FormatWith(sourceItem.Language));
                         }
                     }
